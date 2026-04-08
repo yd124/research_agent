@@ -1,0 +1,31 @@
+{
+  "active_features": [
+    "ret_1d",
+    "ret_5d",
+    "ret_10d",
+    "ret_20d",
+    "ret_60d",
+    "ret_120d",
+    "overnight_ret_1d",
+    "intraday_ret_1d",
+    "ma_gap_10",
+    "ma_gap_20",
+    "ma_gap_60",
+    "vol_5d",
+    "vol_20d",
+    "vol_ratio_5_20",
+    "rel_volume_20",
+    "volume_zscore_20",
+    "log_dollar_volume",
+    "range_1d",
+    "range_5d",
+    "range_20d",
+    "dist_from_20d_high",
+    "dist_from_20d_low",
+    "dist_from_60d_high",
+    "amihud_illiquidity_20",
+    "return_volume_pressure_5d",
+    "return_volume_pressure_20d",
+    "spy_ret_5d"
+  ]
+}

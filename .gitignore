@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.DS_Store
+*.pyc
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+outputs/metrics/*
+outputs/reports/*
+outputs/plots/*
+!outputs/metrics/.gitkeep
+!outputs/reports/.gitkeep
+!outputs/reports/agent_runs/
+!outputs/reports/agent_runs/.gitkeep
+!outputs/plots/.gitkeep

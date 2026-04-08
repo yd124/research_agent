@@ -1,0 +1,15 @@
+universe: "sp500"
+start_date: "2018-01-01"
+end_date: null
+benchmark: "SPY"
+forward_days: 5
+train_end: "2022-12-30"
+val_end: "2024-12-31"
+min_history_days: 120
+model:
+  type: "ridge"
+  alpha: 1.0
+agent:
+  provider: "anthropic"
+  model: "claude-sonnet-4-6"
+  max_iterations: 3
