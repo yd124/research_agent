@@ -145,6 +145,20 @@ The agent will:
 - run `src/experiment_runner.py`
 - write an experiment memo to `outputs/reports/agent_runs/`
 
+### 10. Launch the dashboard
+
+```bash
+streamlit run src/dashboard.py
+```
+
+The dashboard is designed for demos and feedback sessions. It showcases:
+
+- the end-to-end research flow
+- total iterations and best run summary
+- experiment plots
+- per-run details and agent reflections
+- a sortable experiment table
+
 ## Target Definition
 
 For each stock `i` on date `t`, the target is:
