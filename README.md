@@ -206,13 +206,13 @@ It also reports:
 
 ## Feature Selection And Alpha Tuning
 
-The baseline training commands read active features from [`config/feature_selection.json`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/config/feature_selection.json).
+The baseline training commands read active features from [`config/feature_selection.json`].
 
 You can control experiments in three ways:
 
 - edit `config/feature_selection.json`
 - pass `--features` with a comma-separated list
-- pass `--feature-groups` using groups defined in [`src/feature_config.py`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/src/feature_config.py)
+- pass `--feature-groups` using groups defined in [`src/feature_config.py`]
 
 Example:
 
@@ -228,7 +228,7 @@ python src/experiment_runner.py --alpha 10.0 --features ret_5d,ret_20d,ma_gap_20
 
 ## Agent Workflow
 
-The file [`agent/program.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/agent/program.md) defines how the LLM research agent should behave.
+The file [`agent/program.md`] defines how the LLM research agent should behave.
 
 The agent is expected to:
 
