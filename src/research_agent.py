@@ -10,7 +10,7 @@ from typing import Any
 
 import pandas as pd
 
-from agent_llm import AnthropicMessagesClient
+from agent_llm import create_json_client
 from feature_config import FEATURE_GROUPS
 from experiment_utils import load_settings
 
@@ -55,7 +55,7 @@ REFLECTION_SCHEMA: dict[str, Any] = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LLM-driven research agent for ridge experiments.")
     parser.add_argument("--iterations", type=int, default=None, help="Number of agent iterations to run.")
-    parser.add_argument("--model", default=None, help="Anthropic model name. Defaults to config settings.")
+    parser.add_argument("--model", default=None, help="LLM model name. Defaults to config settings.")
     parser.add_argument("--dry-run", action="store_true", help="Print the proposal prompt and exit.")
     return parser.parse_args()
 
@@ -182,10 +182,28 @@ def save_agent_report(run_name: str, proposal: dict[str, Any], result: dict[str,
     return output_path
 
 
+def refresh_plots() -> None:
+    cmd = [sys.executable, "src/plot_experiments.py"]
+    completed = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            f"Warning: plot refresh failed after agent run.\n{completed.stderr or completed.stdout}",
+            file=sys.stderr,
+        )
+
+
 def main() -> None:
     args = parse_args()
     settings = load_settings()
-    model = args.model or settings.get("agent", {}).get("model", "gpt-4o-mini")
+    agent_settings = settings.get("agent", {})
+    provider = agent_settings.get("provider", "anthropic")
+    default_model = "gpt-4.1-mini" if provider == "openai" else "claude-3-7-sonnet-20250219"
+    model = args.model or agent_settings.get("model", default_model)
     iterations = args.iterations or int(settings.get("agent", {}).get("max_iterations", 1))
 
     program_text = read_program()
@@ -200,7 +218,7 @@ def main() -> None:
             print(proposal_prompt)
             return
 
-        client = AnthropicMessagesClient(model=model)
+        client = create_json_client(provider=provider, model=model)
         proposal = client.create_json_response(
             instructions="You are a careful quant research agent. Return only valid JSON and match the requested schema exactly.",
             user_input=proposal_prompt,
@@ -221,6 +239,7 @@ def main() -> None:
         )
 
         report_path = save_agent_report(run_name, proposal, result, reflection)
+        refresh_plots()
         print(
             json.dumps(
                 {

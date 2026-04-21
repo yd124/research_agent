@@ -98,6 +98,10 @@ def plot_accepted_runs(df: pd.DataFrame) -> None:
 
 
 def plot_val_vs_test_scatter(df: pd.DataFrame) -> None:
+    required_columns = {"val_mean_rank_ic", "test_mean_rank_ic"}
+    if not required_columns.issubset(df.columns):
+        return
+
     plot_df = df.dropna(subset=["val_mean_rank_ic", "test_mean_rank_ic"]).copy()
     if plot_df.empty:
         return
@@ -122,7 +126,6 @@ def plot_val_vs_test_scatter(df: pd.DataFrame) -> None:
     plt.tight_layout()
     plt.savefig(OUTPUT_PLOTS_DIR / "validation_vs_test_ic.png", dpi=160)
     plt.close()
-
 
 def plot_feature_group_heatmap(df: pd.DataFrame) -> None:
     if "features_json" not in df.columns or df.empty:

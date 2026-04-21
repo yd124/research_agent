@@ -110,9 +110,10 @@ def main() -> None:
     previous_best = history["val_mean_rank_ic"].max() if not history.empty else None
     accepted = bool(previous_best is None or metrics["val"]["mean_rank_ic"] > previous_best)
 
+    run_created_at_utc = datetime.now(timezone.utc)
     row = {
         "run_name": run_name,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "created_at_utc": run_created_at_utc.isoformat(),
         "alpha": alpha,
         "feature_count": len(feature_cols),
         "features_json": json.dumps(feature_cols),
@@ -126,6 +127,10 @@ def main() -> None:
         "test_mean_rank_ic": metrics["test"]["mean_rank_ic"],
         "test_ic_sharpe": metrics["test"]["ic_sharpe"],
         "test_top_minus_bottom": metrics["test"]["top_minus_bottom"],
+        "universe": settings["universe"],
+        "forward_days": settings["forward_days"],
+        "train_end": settings["train_end"],
+        "val_end": settings["val_end"],
     }
     append_experiment_row(row)
 

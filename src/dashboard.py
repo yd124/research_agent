@@ -29,7 +29,7 @@ def load_experiments() -> pd.DataFrame:
     if "accepted" in df.columns:
         df["accepted"] = df["accepted"].astype(str).str.lower() == "true"
     if "created_at_utc" in df.columns:
-        df["created_at_utc"] = pd.to_datetime(df["created_at_utc"], errors="coerce")
+        df["created_at_utc"] = pd.to_datetime(df["created_at_utc"], format="mixed", utc=True, errors="coerce")
     return df
 
 
@@ -121,7 +121,7 @@ def show_experiment_table(df: pd.DataFrame) -> None:
     display_df = df.copy()
     display_df["feature_groups"] = display_df["features_json"].apply(lambda x: ", ".join(infer_feature_groups(parse_features(x))))
     display_df["notes"] = display_df["notes"].fillna("").astype(str).str.slice(0, 120)
-    columns = [
+    preferred_columns = [
         "run_name",
         "created_at_utc",
         "alpha",
@@ -133,6 +133,7 @@ def show_experiment_table(df: pd.DataFrame) -> None:
         "accepted",
         "notes",
     ]
+    columns = [column for column in preferred_columns if column in display_df.columns]
     st.dataframe(display_df[columns].sort_values("created_at_utc", ascending=False), use_container_width=True)
 
 
@@ -146,6 +147,9 @@ def show_run_detail(df: pd.DataFrame) -> None:
     features = parse_features(row["features_json"])
     feature_groups = infer_feature_groups(features)
 
+    test_ic = row.get("test_mean_rank_ic")
+    test_ic_text = f"{float(test_ic):.5f}" if pd.notna(test_ic) else "N/A"
+
     st.markdown(
         f"""
 **Run:** `{row['run_name']}`  
@@ -153,7 +157,7 @@ def show_run_detail(df: pd.DataFrame) -> None:
 **Accepted:** {bool(row['accepted'])}  
 **Validation IC:** {row['val_mean_rank_ic']:.5f}  
 **Validation IC Sharpe:** {row['val_ic_sharpe']:.5f}  
-**Test IC:** {row['test_mean_rank_ic']:.5f}  
+**Test IC:** {test_ic_text}  
 **Feature Groups:** {", ".join(feature_groups) if feature_groups else "N/A"}
 """
     )

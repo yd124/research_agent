@@ -1,33 +1,36 @@
 # research_agent
 
-`research_agent` is a minimal, reproducible research workflow for predicting **5-day forward returns** on **S&P 500 stocks** using **free daily OHLCV data**.
+`research_agent` is a reproducible, agentic quant research workflow for predicting **5-day forward returns** on **S&P 500 stocks** using **free daily OHLCV data**.
 
-The goal is not to build a production trading system. The goal is to demonstrate an **agentic research loop**:
+The project is built around a simple research loop:
 
-1. define a research question
-2. prepare a clean dataset
-3. train a simple baseline model
-4. evaluate ranking quality
-5. generate a short research report
+1. prepare a clean daily dataset
+2. train a lightweight baseline model
+3. evaluate ranking quality
+4. log experiment results
+5. let an LLM agent propose the next experiment
+6. review everything in a dashboard
 
 ## Project Scope
 
-- Universe: current S&P 500 constituents, fetched from the Wikipedia constituent table at runtime, with Yahoo-style ticker normalization
+- Universe: current S&P 500 constituents fetched at runtime from Wikipedia
 - Data source: `yfinance`
 - Frequency: daily
 - Label: 5-day forward return
+- Baseline model: ridge regression
 - Primary metrics:
   - mean rank IC
   - IC Sharpe
 - Secondary metrics:
   - top-minus-bottom quintile spread
-  - directional hit rate
+  - hit rate
 
 ## Repository Layout
 
 ```text
 config/
   settings.yaml
+  feature_selection.json
 src/
   universe.py
   prepare.py
@@ -39,6 +42,7 @@ src/
   experiment_runner.py
   plot_experiments.py
   research_agent.py
+  dashboard.py
   report.py
 agent/
   program.md
@@ -53,9 +57,10 @@ outputs/
 
 ## Quick Start
 
-### 1. Create and activate a virtual environment
+### 1. Create and activate the project environment
 
 ```bash
+cd /Users/yuqingdai/Documents/research_agent/dualitas_research_agent
 python3 -m venv .venv
 source .venv/bin/activate
 ```
@@ -66,13 +71,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Prepare the dataset
+### 3. Build the dataset
 
 ```bash
 python src/prepare.py
 ```
 
-This downloads daily price history, fetches the current S&P 500 universe, computes features, builds the 5-day forward return target, and writes a processed dataset to [`data/processed/dataset.parquet`](/Users/yuqingdai/Documents/research_agent/data/processed/dataset.parquet).
+This step fetches the current S&P 500 universe, downloads daily price data, computes engineered features, builds the 5-day forward-return target, and writes [`data/processed/dataset.parquet`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/data/processed/dataset.parquet).
 
 ### 4. Train the baseline model
 
@@ -80,23 +85,23 @@ This downloads daily price history, fetches the current S&P 500 universe, comput
 python src/train.py
 ```
 
-This trains a simple ridge regression model and writes prediction files and summary metrics.
+This writes train, validation, and test predictions into `outputs/metrics/`.
 
-### 5. Evaluate the predictions
+### 5. Evaluate the model
 
 ```bash
 python src/evaluate.py
 ```
 
-This computes cross-sectional daily rank IC, IC Sharpe, hit rate, and top-minus-bottom spread.
+This computes cross-sectional ranking metrics such as mean rank IC, IC Sharpe, hit rate, and top-minus-bottom spread.
 
-### 6. Generate a markdown report
+### 6. Generate the text report
 
 ```bash
 python src/report.py
 ```
 
-This writes a short report to [`outputs/reports/latest_report.md`](/Users/yuqingdai/Documents/research_agent/outputs/reports/latest_report.md).
+This writes [`outputs/reports/latest_report.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/outputs/reports/latest_report.md).
 
 ### 7. Run a logged experiment
 
@@ -104,7 +109,7 @@ This writes a short report to [`outputs/reports/latest_report.md`](/Users/yuqing
 python src/experiment_runner.py --alpha 3.0 --feature-groups returns,trend,volatility --notes "Try a tighter momentum and volatility feature set"
 ```
 
-This runs one ridge experiment, logs it to `outputs/metrics/experiments.csv`, and saves experiment-specific metrics.
+This appends a row to `outputs/metrics/experiments.csv` and saves run-specific artifacts.
 
 ### 8. Plot experiment history
 
@@ -112,9 +117,7 @@ This runs one ridge experiment, logs it to `outputs/metrics/experiments.csv`, an
 python src/plot_experiments.py
 ```
 
-This generates experiment progress plots in `outputs/plots/`.
-
-Current plot outputs include:
+Expected plot outputs include:
 
 - `best_so_far_validation_ic.png`
 - `alpha_vs_validation_ic.png`
@@ -130,7 +133,7 @@ Set your API key first:
 export ANTHROPIC_API_KEY="your_api_key_here"
 ```
 
-Then run one or more agent iterations:
+Then run one or more iterations:
 
 ```bash
 python src/research_agent.py --iterations 1
@@ -139,11 +142,11 @@ python src/research_agent.py --iterations 3
 
 The agent will:
 
-- read `agent/program.md`
+- read [`agent/program.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/agent/program.md)
 - inspect `outputs/metrics/experiments.csv`
-- propose the next ridge experiment with structured JSON
+- propose the next ridge experiment in structured JSON
 - run `src/experiment_runner.py`
-- write an experiment memo to `outputs/reports/agent_runs/`
+- write a memo to `outputs/reports/agent_runs/`
 
 ### 10. Launch the dashboard
 
@@ -151,17 +154,28 @@ The agent will:
 streamlit run src/dashboard.py
 ```
 
-The dashboard is designed for demos and feedback sessions. It showcases:
+The restored dashboard is designed for demos and review sessions. It includes:
 
-- the end-to-end research flow
-- total iterations and best run summary
-- experiment plots
-- per-run details and agent reflections
-- a sortable experiment table
+- a top-level overview with best-run and latest-run summaries
+- a visual explanation of the research workflow
+- a plot viewer for saved experiment figures
+- a feature-group usage view
+- a run explorer with notes and agent reflections
+- a sortable experiment log
+
+## Dashboard Notes
+
+The dashboard reads from these generated files when available:
+
+- `outputs/metrics/experiments.csv`
+- `outputs/plots/*.png`
+- `outputs/reports/agent_runs/*.md`
+
+If those files do not exist yet, the dashboard will still open and show empty-state guidance instead of failing.
 
 ## Target Definition
 
-For each stock `i` on date `t`, the target is:
+For each stock `i` on date `t`:
 
 ```text
 forward_5d_return(i, t) = Close(i, t+5) / Close(i, t) - 1
@@ -169,35 +183,35 @@ forward_5d_return(i, t) = Close(i, t+5) / Close(i, t) - 1
 
 ## Evaluation Logic
 
-For each date `t`, we compute cross-sectional rank correlation across all stocks in the universe:
+For each date `t`, the project computes cross-sectional rank correlation across stocks:
 
 ```text
 IC_t = SpearmanCorr_i(pred(i, t), realized_forward_5d_return(i, t))
 ```
 
-Then we summarize the daily IC series using:
+Then it summarizes the IC time series using:
 
 ```text
 mean_ic = mean(IC_t)
 ic_sharpe = mean(IC_t) / std(IC_t)
 ```
 
-We also compute:
+It also reports:
 
-- directional hit rate
+- hit rate
 - average top quintile return
 - average bottom quintile return
 - top-minus-bottom spread
 
 ## Feature Selection And Alpha Tuning
 
-The baseline training command reads active features from [`config/feature_selection.json`](/Users/yuqingdai/Documents/research_agent/config/feature_selection.json).
+The baseline training commands read active features from [`config/feature_selection.json`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/config/feature_selection.json).
 
 You can control experiments in three ways:
 
 - edit `config/feature_selection.json`
 - pass `--features` with a comma-separated list
-- pass `--feature-groups` using groups defined in [`src/feature_config.py`](/Users/yuqingdai/Documents/research_agent/src/feature_config.py)
+- pass `--feature-groups` using groups defined in [`src/feature_config.py`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/src/feature_config.py)
 
 Example:
 
@@ -205,42 +219,22 @@ Example:
 python src/experiment_runner.py --alpha 10.0 --features ret_5d,ret_20d,ma_gap_20,vol_ratio_5_20,rel_volume_20,spy_ret_5d
 ```
 
-Each experiment appends one row to `outputs/metrics/experiments.csv` with:
+## Current Caveats
 
-- run name
-- alpha
-- feature count
-- selected feature list
-- validation and test metrics
-- accepted or rejected status
-
-## Notes
-
-- This is a research demo, not investment advice.
-- Free datasets are noisy and limited.
-- The processed universe is static and does not attempt to solve index membership history.
-- The model is intentionally simple so that the workflow is easy to understand and extend.
+- `prepare.py` needs live network access to fetch the S&P 500 constituent table and Yahoo Finance data.
+- If Wikipedia or Yahoo Finance is unreachable, dataset preparation will fail before training begins.
+- The project is a research demo, not investment advice.
 
 ## Agent Workflow
 
-The file [`agent/program.md`](/Users/yuqingdai/Documents/research_agent/agent/program.md) defines how an LLM-based research agent should operate in this repository.
+The file [`agent/program.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/agent/program.md) defines how the LLM research agent should behave.
 
 The agent is expected to:
 
 - propose one small experiment at a time
 - avoid changing the evaluation contract
-- log results and compare against the current baseline
+- compare new ideas against the current baseline
 - write concise research conclusions
-
-The new experiment tooling is designed to support an `autoresearch`-style loop:
-
-1. choose a feature subset
-2. choose a ridge alpha
-3. run one experiment
-4. compare validation mean rank IC against the current best
-5. update plots and notes
-
-The LLM agent extends this by making the proposal and reflection steps automatic through the Anthropic Messages API.
 
 ## Next Extensions
 
