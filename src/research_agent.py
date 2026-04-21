@@ -197,6 +197,21 @@ def refresh_plots() -> None:
         )
 
 
+def refresh_report() -> None:
+    cmd = [sys.executable, "src/report.py"]
+    completed = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        print(
+            f"Warning: report refresh failed after agent run.\n{completed.stderr or completed.stdout}",
+            file=sys.stderr,
+        )
+
+
 def main() -> None:
     args = parse_args()
     settings = load_settings()
@@ -240,6 +255,7 @@ def main() -> None:
 
         report_path = save_agent_report(run_name, proposal, result, reflection)
         refresh_plots()
+        refresh_report()
         print(
             json.dumps(
                 {

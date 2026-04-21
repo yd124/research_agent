@@ -1,53 +1,75 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
+
+import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_METRICS_DIR = ROOT / "outputs" / "metrics"
+EXPERIMENTS_CSV_PATH = ROOT / "outputs" / "metrics" / "experiments.csv"
 OUTPUT_REPORTS_DIR = ROOT / "outputs" / "reports"
 
 
-def format_metric(value: float) -> str:
-    if value != value:
-        return "nan"
-    return f"{value:.4f}"
+def format_metric(value: float | int | None, digits: int = 4) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    return f"{float(value):.{digits}f}"
 
 
 def main() -> None:
     OUTPUT_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    with (OUTPUT_METRICS_DIR / "evaluation_summary.json").open("r", encoding="utf-8") as f:
-        metrics = json.load(f)
+    if not EXPERIMENTS_CSV_PATH.exists():
+        raise FileNotFoundError("No experiments.csv found. Run experiment_runner.py or research_agent.py first.")
 
-    val_metrics = metrics["val"]
-    test_metrics = metrics["test"]
+    df = pd.read_csv(EXPERIMENTS_CSV_PATH)
+    if df.empty:
+        raise RuntimeError("experiments.csv exists but contains no rows.")
+
+    if "created_at_utc" in df.columns:
+        df["created_at_utc"] = pd.to_datetime(df["created_at_utc"], format="mixed", utc=True, errors="coerce")
+
+    best_idx = df["val_mean_rank_ic"].idxmax()
+    best_row = df.loc[best_idx]
+    latest_row = df.sort_values("created_at_utc", ascending=False).iloc[0] if "created_at_utc" in df.columns else df.iloc[-1]
+    accepted_runs = int(df["accepted"].astype(str).str.lower().eq("true").sum()) if "accepted" in df.columns else 0
 
     report = f"""# Latest Research Report
 
 ## Objective
 
-Train a simple baseline model to predict 5-day forward returns for Nasdaq-100 stocks using free daily data.
+Run a controlled AI-agent research loop for improving 5-day forward return prediction on S&P 500 daily data.
 
-## Validation Summary
+## Experiment Summary
 
-- Mean Rank IC: {format_metric(val_metrics["mean_rank_ic"])}
-- IC Sharpe: {format_metric(val_metrics["ic_sharpe"])}
-- Hit Rate: {format_metric(val_metrics["hit_rate"])}
-- Top Minus Bottom Quintile Spread: {format_metric(val_metrics["top_minus_bottom"])}
+- Total experiments: {len(df)}
+- Accepted runs: {accepted_runs}
+- Latest run: {latest_row.get("run_name", "N/A")}
+- Best run: {best_row.get("run_name", "N/A")}
 
-## Test Summary
+## Best Validation Result
 
-- Mean Rank IC: {format_metric(test_metrics["mean_rank_ic"])}
-- IC Sharpe: {format_metric(test_metrics["ic_sharpe"])}
-- Hit Rate: {format_metric(test_metrics["hit_rate"])}
-- Top Minus Bottom Quintile Spread: {format_metric(test_metrics["top_minus_bottom"])}
+- Alpha: {format_metric(best_row.get("alpha"), 2)}
+- Feature count: {int(best_row.get("feature_count")) if pd.notna(best_row.get("feature_count")) else "N/A"}
+- Validation Mean Rank IC: {format_metric(best_row.get("val_mean_rank_ic"), 6)}
+- Validation IC Sharpe: {format_metric(best_row.get("val_ic_sharpe"), 6)}
+- Validation Top Minus Bottom Quintile Spread: {format_metric(best_row.get("val_top_minus_bottom"), 6)}
+- Test Mean Rank IC: {format_metric(best_row.get("test_mean_rank_ic"), 6)}
+
+## Latest Experiment
+
+- Run: {latest_row.get("run_name", "N/A")}
+- Alpha: {format_metric(latest_row.get("alpha"), 2)}
+- Validation Mean Rank IC: {format_metric(latest_row.get("val_mean_rank_ic"), 6)}
+- Validation IC Sharpe: {format_metric(latest_row.get("val_ic_sharpe"), 6)}
+- Validation Top Minus Bottom Quintile Spread: {format_metric(latest_row.get("val_top_minus_bottom"), 6)}
+- Test Mean Rank IC: {format_metric(latest_row.get("test_mean_rank_ic"), 6)}
+- Notes: {latest_row.get("notes", "")}
 
 ## Interpretation
 
-This baseline is intended as a reproducible starting point, not as evidence of production alpha.
-If validation metrics are weak or unstable, the next step is to add one carefully chosen feature or simplify the universe and rerun the workflow.
+This report summarizes the current experiment log rather than a single baseline-only run.
+Use the best validation result as the current research benchmark, and use the latest run to understand the most recent agent decision.
 """
 
     output_path = OUTPUT_REPORTS_DIR / "latest_report.md"

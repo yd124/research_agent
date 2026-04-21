@@ -163,6 +163,26 @@ Interpretation:
 - Dropping the `trend` group improved the signal
 - This suggests trend features were overlapping with returns and adding noise
 
+Exact feature set for the best run:
+
+- `ret_1d`
+- `ret_5d`
+- `ret_10d`
+- `ret_20d`
+- `ret_60d`
+- `ret_120d`
+- `overnight_ret_1d`
+- `intraday_ret_1d`
+- `vol_5d`
+- `vol_20d`
+- `vol_ratio_5_20`
+- `range_1d`
+- `range_5d`
+- `range_20d`
+- `return_volume_pressure_5d`
+- `return_volume_pressure_20d`
+- `spy_ret_5d`
+
 ### 10. What We Learned from the Search
 
 This should sound like research, not hype.
