@@ -77,7 +77,7 @@ pip install -r requirements.txt
 python src/prepare.py
 ```
 
-This step fetches the current S&P 500 universe, downloads daily price data, computes engineered features, builds the 5-day forward-return target, and writes [`data/processed/dataset.parquet`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/data/processed/dataset.parquet).
+This step fetches the current S&P 500 universe, downloads daily price data, computes engineered features, builds the 5-day forward-return target, and writes [`data/processed/dataset.parquet`]
 
 ### 4. Train the baseline model
 
@@ -101,7 +101,7 @@ This computes cross-sectional ranking metrics such as mean rank IC, IC Sharpe, h
 python src/report.py
 ```
 
-This writes [`outputs/reports/latest_report.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/outputs/reports/latest_report.md).
+This writes [`outputs/reports/latest_report.md`](https://github.com/yd124/research_agent/blob/main/outputs/reports/latest_report.md).
 
 ### 7. Run a logged experiment
 
@@ -131,6 +131,7 @@ Set your API key first:
 
 ```bash
 export ANTHROPIC_API_KEY="your_api_key_here"
+export OPENAI_API_KEY="your_api_key_here"
 ```
 
 Then run one or more iterations:
@@ -142,7 +143,7 @@ python src/research_agent.py --iterations 3
 
 The agent will:
 
-- read [`agent/program.md`](/Users/yuqingdai/Documents/research_agent/dualitas_research_agent/agent/program.md)
+- read `agent/program.md`
 - inspect `outputs/metrics/experiments.csv`
 - propose the next ridge experiment in structured JSON
 - run `src/experiment_runner.py`
