@@ -45,6 +45,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Comma-separated feature groups to include. Available groups are returns, trend, volatility, volume_liquidity, interaction.",
     )
+    parser.add_argument(
+        "--research-mode",
+        default="explore",
+        choices=["explore", "exploit", "prune"],
+        help="High-level research intent for the run.",
+    )
     parser.add_argument("--notes", default="", help="Short experiment hypothesis or notes.")
     return parser.parse_args()
 
@@ -104,11 +110,28 @@ def main() -> None:
     metrics = {
         split_name: evaluate_predictions_df(frame, target_col=target_col)
         for split_name, frame in prediction_frames.items()
+        if split_name in {"train", "val"}
     }
 
     history = load_experiment_history()
     previous_best = history["val_mean_rank_ic"].max() if not history.empty else None
-    accepted = bool(previous_best is None or metrics["val"]["mean_rank_ic"] > previous_best)
+    previous_median = history["val_mean_rank_ic"].median() if not history.empty else None
+    config_key = json.dumps({"alpha": alpha, "features": feature_cols}, sort_keys=True)
+    is_novel_configuration = True
+    if not history.empty and "config_key" in history.columns:
+        is_novel_configuration = bool(~history["config_key"].eq(config_key).any())
+
+    beats_best = bool(previous_best is None or metrics["val"]["mean_rank_ic"] > previous_best)
+    beats_recent_baseline = bool(
+        previous_median is None or metrics["val"]["mean_rank_ic"] >= previous_median
+    )
+    accepted = bool(
+        beats_best
+        or (
+            is_novel_configuration
+            and beats_recent_baseline
+        )
+    )
 
     run_created_at_utc = datetime.now(timezone.utc)
     row = {
@@ -117,18 +140,22 @@ def main() -> None:
         "alpha": alpha,
         "feature_count": len(feature_cols),
         "features_json": json.dumps(feature_cols),
+        "config_key": config_key,
+        "research_mode": args.research_mode,
+        "is_novel_configuration": is_novel_configuration,
         "notes": args.notes,
         "accepted": accepted,
+        "delta_vs_best_val_ic": None if previous_best is None else metrics["val"]["mean_rank_ic"] - previous_best,
+        "delta_vs_median_val_ic": None if previous_median is None else metrics["val"]["mean_rank_ic"] - previous_median,
         "train_mean_rank_ic": metrics["train"]["mean_rank_ic"],
         "train_ic_sharpe": metrics["train"]["ic_sharpe"],
         "val_mean_rank_ic": metrics["val"]["mean_rank_ic"],
         "val_ic_sharpe": metrics["val"]["ic_sharpe"],
         "val_top_minus_bottom": metrics["val"]["top_minus_bottom"],
-        "test_mean_rank_ic": metrics["test"]["mean_rank_ic"],
-        "test_ic_sharpe": metrics["test"]["ic_sharpe"],
-        "test_top_minus_bottom": metrics["test"]["top_minus_bottom"],
         "universe": settings["universe"],
         "forward_days": settings["forward_days"],
+        "start_date": settings["start_date"],
+        "end_date": settings["end_date"],
         "train_end": settings["train_end"],
         "val_end": settings["val_end"],
     }
@@ -141,6 +168,10 @@ def main() -> None:
     payload = {
         "run_name": str(run_name),
         "accepted": bool(accepted),
+        "research_mode": args.research_mode,
+        "is_novel_configuration": bool(is_novel_configuration),
+        "delta_vs_best_val_ic": None if previous_best is None else float(metrics["val"]["mean_rank_ic"] - previous_best),
+        "delta_vs_median_val_ic": None if previous_median is None else float(metrics["val"]["mean_rank_ic"] - previous_median),
         "metrics": {
             split: {key: (value.item() if hasattr(value, "item") else value) for key, value in split_metrics.items()}
             for split, split_metrics in metrics.items()

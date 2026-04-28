@@ -17,7 +17,6 @@ PLOT_FILES = {
     "Best-So-Far Validation IC": "best_so_far_validation_ic.png",
     "Alpha vs Validation IC": "alpha_vs_validation_ic.png",
     "Accepted Runs": "accepted_runs_validation_ic.png",
-    "Validation vs Test IC": "validation_vs_test_ic.png",
     "Feature Group Heatmap": "feature_group_heatmap.png",
 }
 
@@ -81,6 +80,8 @@ def show_overview(df: pd.DataFrame) -> None:
         f"""
 **Current best run:** `{best_row['run_name']}`  
 **Feature count:** {int(best_row['feature_count'])}  
+**Training period:** {best_row.get('start_date', 'N/A')} to {best_row.get('train_end', 'N/A')}  
+**Validation period:** {best_row.get('train_end', 'N/A')} to {best_row.get('val_end', 'N/A')}  
 **Validation IC Sharpe:** {best_row['val_ic_sharpe']:.5f}  
 **Validation Top-Bottom Spread:** {best_row['val_top_minus_bottom']:.5f}
 """
@@ -94,7 +95,7 @@ def show_flow() -> None:
 1. `prepare.py` builds the daily S&P 500 dataset and 5-day forward-return labels.
 2. `research_agent.py` reads the experiment history and proposes the next experiment.
 3. `experiment_runner.py` runs Ridge regression with a chosen `alpha` and feature-group subset.
-4. `evaluate.py` computes validation/test ranking metrics.
+4. `evaluate.py` computes research-loop ranking metrics with validation as the primary selection target.
 5. Results are logged to `outputs/metrics/experiments.csv`.
 6. Agent reflections are written to `outputs/reports/agent_runs/`.
 7. `plot_experiments.py` updates the experiment visualizations.
@@ -127,9 +128,10 @@ def show_experiment_table(df: pd.DataFrame) -> None:
         "alpha",
         "feature_count",
         "feature_groups",
+        "train_end",
+        "val_end",
         "val_mean_rank_ic",
         "val_ic_sharpe",
-        "test_mean_rank_ic",
         "accepted",
         "notes",
     ]
@@ -147,17 +149,15 @@ def show_run_detail(df: pd.DataFrame) -> None:
     features = parse_features(row["features_json"])
     feature_groups = infer_feature_groups(features)
 
-    test_ic = row.get("test_mean_rank_ic")
-    test_ic_text = f"{float(test_ic):.5f}" if pd.notna(test_ic) else "N/A"
-
     st.markdown(
         f"""
 **Run:** `{row['run_name']}`  
 **Alpha:** {row['alpha']:.2f}  
 **Accepted:** {bool(row['accepted'])}  
+**Training period:** {row.get('start_date', 'N/A')} to {row.get('train_end', 'N/A')}  
+**Validation period:** {row.get('train_end', 'N/A')} to {row.get('val_end', 'N/A')}  
 **Validation IC:** {row['val_mean_rank_ic']:.5f}  
 **Validation IC Sharpe:** {row['val_ic_sharpe']:.5f}  
-**Test IC:** {test_ic_text}  
 **Feature Groups:** {", ".join(feature_groups) if feature_groups else "N/A"}
 """
     )

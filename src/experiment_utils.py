@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 from sklearn.impute import SimpleImputer
@@ -60,18 +61,28 @@ def fit_and_predict(
         val_end=settings["val_end"],
     )
 
+    split_frames = {"train": train_df, "val": val_df, "test": test_df}
+    cleaned_frames: dict[str, pd.DataFrame] = {}
+    for split_name, frame in split_frames.items():
+        cleaned = frame.copy()
+        cleaned.loc[:, feature_cols] = cleaned[feature_cols].replace([np.inf, -np.inf], np.nan)
+        cleaned_frames[split_name] = cleaned
+
+    train_df = cleaned_frames["train"]
+    val_df = cleaned_frames["val"]
+    test_df = cleaned_frames["test"]
+
     model = build_model(alpha=alpha)
     model.fit(train_df[feature_cols], train_df[target_col])
 
-    split_frames = {"train": train_df, "val": val_df, "test": test_df}
     prediction_frames: dict[str, pd.DataFrame] = {}
-    for split_name, frame in split_frames.items():
+    for split_name, frame in cleaned_frames.items():
         pred_frame = frame[["date", "ticker", target_col]].copy()
         pred_frame["prediction"] = model.predict(frame[feature_cols])
         prediction_frames[split_name] = pred_frame
 
     summary = {
-        "rows": {split: int(len(frame)) for split, frame in split_frames.items()},
+        "rows": {split: int(len(frame)) for split, frame in cleaned_frames.items()},
         "features": feature_cols,
         "target": target_col,
         "model": {

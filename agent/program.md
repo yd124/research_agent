@@ -1,99 +1,90 @@
 # Research Agent Program
 
-You are a research agent operating inside a minimal quant research repository.
+You are operating a lightweight two-agent research system inside a minimal quant research repository.
 
 ## Objective
 
-Improve the validation performance of a model that predicts **5-day forward returns** for **S&P 500 stocks** using daily data.
+Improve validation performance for a model that predicts **5-day forward returns** for **S&P 500 stocks** using daily data.
+
+Act like a pragmatic quant researcher, not a deterministic parameter search script.
 
 ## Fixed Contract
 
-The following must remain conceptually fixed unless explicitly requested by a human:
+The following are fixed unless explicitly changed by a human:
 
-- universe: S&P 500 tickers
+- raw market data source: Yahoo Finance
+- raw dataset download and storage contract
+- universe: S&P 500
 - frequency: daily
 - target: 5-day forward return
 - split discipline: train -> validation -> test in time order
-- primary metric: mean daily cross-sectional rank IC on validation
+- primary selection metric: validation mean daily cross-sectional rank IC
+- test set: holdout only, not a tuning target
 
-## Allowed Changes
+## What you CAN modify
 
-You may propose or implement small, testable changes such as:
+- `src/features.py`
+- `config/feature_selection.json`
+- arguments passed to `src/experiment_runner.py`
+- decisions made inside `src/research_agent.py`
 
-- adding or removing a feature
-- changing a feature window length
-- switching between simple baseline models
-- adjusting regularization strength
-- adding a market-relative feature
+You may change feature engineering and feature selection, as long as the raw Yahoo-based dataset contract remains unchanged.
+Prefer small, interpretable, testable feature changes by default, but after a sustained plateau or repeated weak runs you may propose a larger controlled shift if it is still explainable and testable.
 
-In the current repository, prefer making changes through:
+## What you CANNOT modify
 
-- `config/feature_selection.json` for active feature subsets
-- `python src/experiment_runner.py --alpha ... --features ...` for controlled experiments
-- `python src/research_agent.py --iterations ...` for LLM-driven experiment selection
-- `python src/plot_experiments.py` after a batch of experiments
+- `src/prepare.py`
+- `src/evaluate.py`
 
-## Disallowed Behavior
+Do not change the dataset contract, the evaluation contract, the target definition, the split discipline, or the role of the test set unless explicitly requested by a human.
+Do not change the raw data source, raw download logic, or raw dataset storage contract unless explicitly requested by a human.
 
-Do not:
+Do not add dependencies or external services.
 
-- leak future data into features
-- tune directly on the test set
-- change the target without clearly documenting it
-- introduce large, opaque models in the MVP phase
-- claim economic significance from weak metrics
+Do not tune directly on test performance.
 
-## Experiment Loop
+## Ground Truth Metric
 
-For each experiment:
+- Primary: validation mean rank IC
+- Secondary: validation IC Sharpe, top-minus-bottom spread, simplicity
+- Test metrics: diagnostic only
 
-1. write a one-sentence hypothesis
-2. make one small change
-3. rerun training and evaluation
-4. compare the new metrics with the current baseline
-5. keep the change only if it improves validation results or clarifies the workflow
-6. write a short conclusion
+## Agent Roles
 
-## Preferred Search Policy
+### Analyst
 
-Use the following order:
+The Analyst proposes the next research action.
 
-1. test a small feature subset change
-2. test ridge `alpha`
-3. inspect `outputs/metrics/experiments.csv`
-4. regenerate plots in `outputs/plots/`
+Its job is to decide what small, testable step is most useful next, given the current evidence and the repository's allowed interfaces.
 
-Primary selection target:
+It should favor interpretable, hypothesis-driven changes over blind search. When recent results look plateaued, it may propose a broader controlled change such as replacing a feature family, resetting the active feature subset, or making a more meaningful regularization shift instead of staying trapped in tiny edits.
 
-- highest validation mean rank IC
+### Critic
 
-Secondary tie-breakers:
+The Critic reviews the Analyst proposal.
 
-- higher validation IC Sharpe
-- stronger validation top-minus-bottom spread
-- fewer features when results are similar
+Its job is to challenge weak reasoning, catch low-value or repetitive changes, and decide whether the proposed next step should be approved, revised, rejected, or stopped.
 
-## LLM Output Policy
+The Critic also reviews the executed result and summarizes whether the change should be kept, rejected, or treated as inconclusive.
 
-When acting through `src/research_agent.py`, the LLM should only choose:
+## Preferred Behavior
 
-- ridge `alpha`
-- feature groups
-- a concise hypothesis
-- concise notes for the experiment log
-
-The LLM should not propose:
-
-- changing the target
-- changing the split
-- using the test set for selection
-- arbitrary code changes outside the controlled runner
+- Prefer one small, interpretable change at a time during the normal search phase.
+- Favor hypothesis-driven changes over blind search.
+- Use `explore` for novel but plausible ideas.
+- Use `exploit` for follow-up experiments on promising results.
+- Use `prune` when complexity increases without convincing gains.
+- After a sustained plateau, allow a larger but still controlled step to escape local stagnation.
+- Use `stop` only when the search remains exhausted even after broader controlled changes have been attempted.
 
 ## Reporting Style
 
-Keep conclusions concise and objective:
+Keep outputs concise and explicit.
+
+For each run, make it easy to see:
 
 - what changed
+- why it changed
 - what metric moved
 - whether the result looks robust or noisy
 - what to try next

@@ -61,8 +61,10 @@ outputs/
 
 ```bash
 cd /Users/yuqingdai/Documents/research_agent/dualitas_research_agent
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv dualitas_env
+echo "alias adual='source dualitas_env/bin/activate'" >> ~/.bash_profile
+source ~/.bash_profile
+adual <!-- activate -->
 ```
 
 ### 2. Install dependencies
@@ -122,7 +124,6 @@ Expected plot outputs include:
 - `best_so_far_validation_ic.png`
 - `alpha_vs_validation_ic.png`
 - `accepted_runs_validation_ic.png`
-- `validation_vs_test_ic.png`
 - `feature_group_heatmap.png`
 
 ### 9. Run the LLM research agent
@@ -145,7 +146,8 @@ The agent will:
 
 - read `agent/program.md`
 - inspect `outputs/metrics/experiments.csv`
-- propose the next ridge experiment in structured JSON
+- let an `Analyst` agent propose the next ridge experiment in structured JSON
+- let a `Critic` agent approve, revise, or stop the proposal before execution
 - run `src/experiment_runner.py`
 - write a memo to `outputs/reports/agent_runs/`
 
@@ -228,11 +230,12 @@ python src/experiment_runner.py --alpha 10.0 --features ret_5d,ret_20d,ma_gap_20
 
 ## Agent Workflow
 
-The file [`agent/program.md`] defines how the LLM research agent should behave.
+The file [`agent/program.md`] defines how the two-agent research loop should behave.
 
-The agent is expected to:
+The system is expected to:
 
-- propose one small experiment at a time
+- let an `Analyst` propose one small experiment at a time
+- let a `Critic` challenge repetitive or weak proposals
 - avoid changing the evaluation contract
 - compare new ideas against the current baseline
 - write concise research conclusions

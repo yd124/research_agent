@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
 RAW_DIR = ROOT / "data" / "raw"
 PROCESSED_DIR = ROOT / "data" / "processed"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Prepare the fixed raw dataset and processed feature dataset.")
+    parser.add_argument(
+        "--refresh-raw",
+        action="store_true",
+        help="Redownload raw Yahoo data instead of reusing data/raw/prices.parquet.",
+    )
+    return parser.parse_args()
 
 
 def load_settings() -> dict:
@@ -81,18 +92,24 @@ def add_benchmark_feature(df: pd.DataFrame, benchmark: str) -> pd.DataFrame:
 
 
 def main() -> None:
+    args = parse_args()
     settings = load_settings()
     tickers = load_universe(settings["universe"])
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    prices = download_prices(
-        tickers=tickers,
-        start_date=settings["start_date"],
-        end_date=settings["end_date"],
-    )
-    prices.to_parquet(RAW_DIR / "prices.parquet", index=False)
+    raw_prices_path = RAW_DIR / "prices.parquet"
+    if raw_prices_path.exists() and not args.refresh_raw:
+        prices = pd.read_parquet(raw_prices_path)
+        prices["date"] = pd.to_datetime(prices["date"]).dt.tz_localize(None)
+    else:
+        prices = download_prices(
+            tickers=tickers,
+            start_date=settings["start_date"],
+            end_date=settings["end_date"],
+        )
+        prices.to_parquet(raw_prices_path, index=False)
 
     dataset = add_features(prices)
     dataset = add_benchmark_feature(dataset, benchmark=settings["benchmark"])

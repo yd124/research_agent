@@ -51,25 +51,31 @@ Run a controlled AI-agent research loop for improving 5-day forward return predi
 
 - Alpha: {format_metric(best_row.get("alpha"), 2)}
 - Feature count: {int(best_row.get("feature_count")) if pd.notna(best_row.get("feature_count")) else "N/A"}
+- Research mode: {best_row.get("research_mode", "N/A")}
+- Training period: {best_row.get("start_date", "N/A")} to {best_row.get("train_end", "N/A")}
+- Validation period: {best_row.get("train_end", "N/A")} to {best_row.get("val_end", "N/A")}
 - Validation Mean Rank IC: {format_metric(best_row.get("val_mean_rank_ic"), 6)}
 - Validation IC Sharpe: {format_metric(best_row.get("val_ic_sharpe"), 6)}
 - Validation Top Minus Bottom Quintile Spread: {format_metric(best_row.get("val_top_minus_bottom"), 6)}
-- Test Mean Rank IC: {format_metric(best_row.get("test_mean_rank_ic"), 6)}
 
 ## Latest Experiment
 
 - Run: {latest_row.get("run_name", "N/A")}
 - Alpha: {format_metric(latest_row.get("alpha"), 2)}
+- Research mode: {latest_row.get("research_mode", "N/A")}
+- Training period: {latest_row.get("start_date", "N/A")} to {latest_row.get("train_end", "N/A")}
+- Validation period: {latest_row.get("train_end", "N/A")} to {latest_row.get("val_end", "N/A")}
+- Novel configuration: {latest_row.get("is_novel_configuration", "N/A")}
 - Validation Mean Rank IC: {format_metric(latest_row.get("val_mean_rank_ic"), 6)}
 - Validation IC Sharpe: {format_metric(latest_row.get("val_ic_sharpe"), 6)}
 - Validation Top Minus Bottom Quintile Spread: {format_metric(latest_row.get("val_top_minus_bottom"), 6)}
-- Test Mean Rank IC: {format_metric(latest_row.get("test_mean_rank_ic"), 6)}
+- Delta vs previous best validation IC: {format_metric(latest_row.get("delta_vs_best_val_ic"), 6)}
 - Notes: {latest_row.get("notes", "")}
 
 ## Interpretation
 
 This report summarizes the current experiment log rather than a single baseline-only run.
-Use the best validation result as the current research benchmark, and use the latest run to understand the most recent agent decision.
+Use the best validation result as the current research benchmark, and use the latest run to understand the most recent agent decision. Holdout test evaluation should be treated as a separate final step, not part of the daily research loop.
 """
 
     output_path = OUTPUT_REPORTS_DIR / "latest_report.md"

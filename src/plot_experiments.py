@@ -97,36 +97,6 @@ def plot_accepted_runs(df: pd.DataFrame) -> None:
     plt.close()
 
 
-def plot_val_vs_test_scatter(df: pd.DataFrame) -> None:
-    required_columns = {"val_mean_rank_ic", "test_mean_rank_ic"}
-    if not required_columns.issubset(df.columns):
-        return
-
-    plot_df = df.dropna(subset=["val_mean_rank_ic", "test_mean_rank_ic"]).copy()
-    if plot_df.empty:
-        return
-
-    plt.figure(figsize=(8, 6))
-    scatter = plt.scatter(
-        plot_df["val_mean_rank_ic"],
-        plot_df["test_mean_rank_ic"],
-        c=plot_df["feature_count"],
-        cmap="plasma",
-        alpha=0.8,
-    )
-    min_val = min(plot_df["val_mean_rank_ic"].min(), plot_df["test_mean_rank_ic"].min())
-    max_val = max(plot_df["val_mean_rank_ic"].max(), plot_df["test_mean_rank_ic"].max())
-    plt.plot([min_val, max_val], [min_val, max_val], linestyle="--", linewidth=1, color="gray")
-    plt.xlabel("Validation Mean Rank IC")
-    plt.ylabel("Test Mean Rank IC")
-    plt.title("Validation vs Test Mean Rank IC")
-    cbar = plt.colorbar(scatter)
-    cbar.set_label("Feature Count")
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(OUTPUT_PLOTS_DIR / "validation_vs_test_ic.png", dpi=160)
-    plt.close()
-
 def plot_feature_group_heatmap(df: pd.DataFrame) -> None:
     if "features_json" not in df.columns or df.empty:
         return
@@ -167,7 +137,6 @@ def main() -> None:
     plot_best_so_far(df)
     plot_alpha_scatter(df)
     plot_accepted_runs(df)
-    plot_val_vs_test_scatter(df)
     plot_feature_group_heatmap(df)
 
     print(f"Saved experiment plots to {OUTPUT_PLOTS_DIR}")
